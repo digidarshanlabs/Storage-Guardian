@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Guardian: Web Sentinel</title>
+    <meta name="description" content="Lightweight storage monitoring for Android devices">
+    <meta name="theme-color" content="#1a1a2e">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU3RvcmFnZSBHdWFyZGlhbjogV2ViIFNlbnRpbmVsIiwic2hvcnRfbmFtZSI6IlN0b3JhZ2UgR3VhcmRpYW4iLCJkZXNjcmlwdGlvbiI6IkxpZ2h0d2VpZ2h0IHN0b3JhZ2UgbW9uaXRvcmluZyBmb3IgQW5kcm9pZCBkZXZpY2VzIiwic3RhcnRfdXJsIjoiLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMxYTFhMmUiLCJ0aGVtZV9jb2xvciI6IiMxYTFhMmUiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCM2FXUjBhRDBpTWpRaUlHaGxhV2RvZEQwaU1qUWlJSFpwWlhkQ2IzZzlJakFnTUNBeU5DQXlOQ0lnWm1sc2JEMGlJekV4TVRFMU15SStQSEpsWTNRZ2VEMGlNeUlnZVQwaU15SWdkMmxrZEdnOUlqRTRJaUJvWldsbmFIUTlJakU0SWlCeWVEMGlNeUlnWm1sc2JEMGlJell6TnpNMFJTSXZQanh3WVhSb0lHUTlJazB4TWlBeElERXhJRFV1TlNBeElEUXVOVU11T0RnZ01TMDJJVGxoTVNBeklEQWdOUzVoTlRrZ01TNWlPRElnTWpFZ09ERTRNQ0E1TGpKaE1TQXJJREF2UGp3dmMzWm5QZz09Iiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwifV19">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 400px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .container.pulse::before {
+            left: 100%;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            font-weight: 300;
+        }
+
+        .storage-icon {
+            font-size: 3rem;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .storage-info {
+            margin: 25px 0;
+        }
+
+        .storage-bar-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            height: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .storage-bar {
+            height: 100%;
+            border-radius: 25px;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .storage-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .storage-bar.safe {
+            background: linear-gradient(45deg, #00c851, #007e33);
+        }
+
+        .storage-bar.warning {
+            background: linear-gradient(45deg, #ffbb33, #ff8800);
+        }
+
+        .storage-bar.critical {
+            background: linear-gradient(45deg, #ff4444, #cc0000);
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 5px rgba(255, 68, 68, 0.5); }
+            100% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.8); }
+        }
+
+        .percentage {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 15px 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .storage-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .detail-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .status-message {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 15px;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .status-safe {
+            background: rgba(0, 200, 81, 0.1);
+            border-color: rgba(0, 200, 81, 0.3);
+            color: #00c851;
+        }
+
+        .status-warning {
+            background: rgba(255, 187, 51, 0.1);
+            border-color: rgba(255, 187, 51, 0.3);
+            color: #ffbb33;
+        }
+
+        .status-critical {
+            background: rgba(255, 68, 68, 0.1);
+            border-color: rgba(255, 68, 68, 0.3);
+            color: #ff4444;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px rgba(255, 68, 68, 0.3); }
+            100% { box-shadow: 0 0 15px rgba(255, 68, 68, 0.6); }
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 25px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            color: #ff4444;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .storage-type {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .cleanup-suggestions {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .cleanup-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4facfe;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cleanup-list {
+            text-align: left;
+        }
+
+        .cleanup-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .cleanup-item:last-child {
+            border-bottom: none;
+        }
+
+        .cleanup-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding-left: 8px;
+        }
+
+        .cleanup-icon {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .cleanup-text {
+            flex: 1;
+        }
+
+        .cleanup-priority {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .priority-high {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+
+        .priority-medium {
+            background: rgba(255, 187, 51, 0.2);
+            color: #ffbb33;
+        }
+
+        .priority-low {
+            background: rgba(0, 200, 81, 0.2);
+            color: #00c851;
+        }
+
+        .advanced-tools {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tool-button {
+            background: rgba(79, 172, 254, 0.1);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            color: #4facfe;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            display: inline-block;
+        }
+
+        .tool-button:hover {
+            background: rgba(79, 172, 254, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            opacity: 0.5;
+            text-align: center;
+        }
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .title {
+                font-size: 1.5rem;
+            }
+            
+            .percentage {
+                font-size: 1.8rem;
+            }
+        
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <noscript>
+            <div class="error-message">
+                ⚠️ This app requires JavaScript to run. Please enable JavaScript in your browser settings.
+            </div>
+        </noscript>
+        
+        <div class="header">
+            <h1 class="title">🛡️ Storage Guardian</h1>
+            <p class="subtitle">Web Sentinel</p>
+        </div>
+
+        <div class="storage-icon" id="storageIcon">📱</div>
+
+        <div class="storage-info" id="storageInfo">
+            <div class="storage-bar-container">
+                <div class="storage-bar" id="storageBar"></div>
+            </div>
+            
+            <div class="percentage" id="percentage">--.--%</div>
+            <div class="storage-type" id="storageType">Browser Sandbox Storage</div>
+            
+            <div class="storage-details" id="storageDetails">
+                <div class="detail-card">
+                    <div class="detail-label">Used</div>
+                    <div class="detail-value" id="usedStorage">-- GB</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Free</div>
+                    <div class="detail-value" id="freeStorage">-- GB</div>
+                </div>
+            </div>
+
+            <div class="status-message" id="statusMessage"></div>
+
+            <div class="cleanup-suggestions" id="cleanupSuggestions" style="display: none;">
+                <div class="cleanup-title">
+                    🧹 <span>Cleanup Suggestions</span>
+                </div>
+                <div class="cleanup-list" id="cleanupList"></div>
+                <div class="advanced-tools">
+                    <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 10px;">Advanced Tools:</div>
+                    <button class="tool-button" onclick="clearBrowserCache()">🗑️ Clear Cache</button>
+                    <button class="tool-button" onclick="showStorageBreakdown()">📊 Storage Details</button>
+                    <button class="tool-button" onclick="analyzeLocalStorage()">🔍 Analyze Data</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="refresh-btn" id="refreshBtn" onclick="checkStorage()">
+            🔄 Refresh Storage
+        </button>
+
+        <div class="footer">
+            <p>"Your phone shouldn't wait till it chokes to ask for help."</p>
+        </div>
+    </div>
+
+    <script>
+        let storageData = {
+            quota: 0,
+            usage: 0,
+            percentage: 0
+        };
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 GB';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getStorageStatus(percentage) {
+            if (percentage < 75) {
+                return {
+                    class: 'safe',
+                    message: '✅ Storage looks healthy! You\'re in the safe zone.',
+                    icon: '😊'
+                };
+            } else if (percentage < 90) {
+                return {
+                    class: 'warning',
+                    message: '⚠️ Caution! Consider cleaning up some files soon.',
+                    icon: '😐'
+                };
+            } else {
+                return {
+                    class: 'critical',
+                    message: '🔥 Critical! Your storage is almost full. Clean up now!',
+                    icon: '😰'
+                };
+            }
+        }
+
+        function vibrate() {
+            const suggestions = [
+                {
+                    icon: '🖼️',
+                    text: 'Clear downloaded images and cached media files',
+                    priority: percentage > 90 ? 'high' : 'medium'
+                },
+                {
+                    icon: '📱',
+                    text: 'Remove unused apps and their data',
+                    priority: percentage > 85 ? 'high' : 'low'
+                },
+                {
+                    icon: '🎵',
+                    text: 'Delete offline music and podcast downloads',
+                    priority: percentage > 80 ? 'medium' : 'low'
+                },
+                {
+                    icon: '📁',
+                    text: 'Clean up Downloads folder',
+                    priority: percentage > 75 ? 'high' : 'medium'
+                },
+                {
+                    icon: '💾',
+                    text: 'Clear browser cache and cookies',
+                    priority: 'medium'
+                },
+                {
+                    icon: '📧',
+                    text: 'Remove old email attachments',
+                    priority: percentage > 85 ? 'medium' : 'low'
+                },
+                {
+                    icon: '🎮',
+                    text: 'Uninstall unused games and clear game data',
+                    priority: percentage > 90 ? 'high' : 'low'
+                }
+            ];
+
+            // Filter suggestions based on priority and current storage level
+            return suggestions.filter(suggestion => {
+                if (percentage > 90) return true; // Show all suggestions when critical
+                if (percentage > 75) return suggestion.priority !== 'low';
+                return suggestion.priority === 'high' || suggestion.priority === 'medium';
+            });
+        }
+
+        function updateCleanupSuggestions(percentage) {
+            const cleanupContainer = document.getElementById('cleanupSuggestions');
+            const cleanupList = document.getElementById('cleanupList');
+            
+            if (percentage > 70) { // Show suggestions when approaching warning level
+                const suggestions = getCleanupSuggestions(percentage);
+                
+                cleanupList.innerHTML = suggestions.map(suggestion => `
+                    <div class="cleanup-item">
+                        <div class="cleanup-icon">${suggestion.icon}</div>
+                        <div class="cleanup-text">${suggestion.text}</div>
+                        <div class="cleanup-priority priority-${suggestion.priority}">${suggestion.priority.toUpperCase()}</div>
+                    </div>
+                `).join('');
+                
+                cleanupContainer.style.display = 'block';
+            } else {
+                cleanupContainer.style.display = 'none';
+            }
+        }
+
+        async function clearBrowserCache() {
+            if ('caches' in window) {
+                try {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    alert('✅ Browser cache cleared successfully!');
+                    setTimeout(checkStorage, 1000); // Refresh storage after clearing
+                } catch (error) {
+                    alert('❌ Failed to clear cache: ' + error.message);
+                }
+            } else {
+                alert('❌ Cache API not supported in this browser');
+            }
+        }
+
+        function showStorageBreakdown() {
+            if (storageData.quota > 0) {
+                const breakdown = `
+📊 **Storage Breakdown:**
+• Total Quota: ${formatBytes(storageData.quota)}
+• Used Space: ${formatBytes(storageData.usage)}
+• Free Space: ${formatBytes(storageData.quota - storageData.usage)}
+• Usage: ${storageData.percentage.toFixed(2)}%
+
+📱 **Note:** This shows browser sandbox storage, not total device storage.
+                `;
+                alert(breakdown);
+            } else {
+                alert('❌ Storage information not available');
+            }
+        }
+
+        async function analyzeLocalStorage() {
+            try {
+                let totalSize = 0;
+                let itemCount = 0;
+                
+                // Analyze localStorage
+                for (let key in localStorage) {
+                    if (localStorage.hasOwnProperty(key)) {
+                        totalSize += localStorage[key].length;
+                        itemCount++;
+                    }
+                }
+                
+                // Analyze sessionStorage
+                let sessionSize = 0;
+                let sessionCount = 0;
+                for (let key in sessionStorage) {
+                    if (sessionStorage.hasOwnProperty(key)) {
+                        sessionSize += sessionStorage[key].length;
+                        sessionCount++;
+                    }
+                }
+                
+                const analysis = `
+🔍 **Local Storage Analysis:**
+• localStorage: ${itemCount} items (~${(totalSize/1024).toFixed(2)} KB)
+• sessionStorage: ${sessionCount} items (~${(sessionSize/1024).toFixed(2)} KB)
+• Total Local Data: ~${((totalSize + sessionSize)/1024).toFixed(2)} KB
+
+💡 **Tip:** Clear browser data in Settings > Privacy to free up space.
+                `;
+                alert(analysis);
+            } catch (error) {
+                alert('❌ Unable to analyze storage: ' + error.message);
+            }
+        }
+            if ('vibrate' in navigator && storageData.percentage > 90) {
+                navigator.vibrate([200, 100, 200]);
+            }
+        }
+
+        function updateUI() {
+            const container = document.getElementById('container');
+            const storageBar = document.getElementById('storageBar');
+            const percentage = document.getElementById('percentage');
+            const usedStorage = document.getElementById('usedStorage');
+            const freeStorage = document.getElementById('freeStorage');
+            const statusMessage = document.getElementById('statusMessage');
+            const storageIcon = document.getElementById('storageIcon');
+
+            const status = getStorageStatus(storageData.percentage);
+
+            // Update percentage display
+            percentage.textContent = storageData.percentage.toFixed(2) + '%';
+
+            // Update storage bar
+            storageBar.style.width = storageData.percentage + '%';
+            storageBar.className = `storage-bar ${status.class}`;
+
+            // Update storage details
+            usedStorage.textContent = formatBytes(storageData.usage);
+            freeStorage.textContent = formatBytes(storageData.quota - storageData.usage);
+
+            // Update status message
+            statusMessage.textContent = status.message;
+            statusMessage.className = `status-message status-${status.class}`;
+
+            // Update icon
+            storageIcon.textContent = status.icon;
+
+            // Add pulse effect for critical status
+            if (status.class === 'critical') {
+                container.classList.add('pulse');
+                vibrate();
+            } else {
+                container.classList.remove('pulse');
+            }
+
+            // Update cleanup suggestions
+            updateCleanupSuggestions(storageData.percentage);
+        }
+
+        async function checkStorage() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const container = document.getElementById('container');
+            
+            try {
+                refreshBtn.disabled = true;
+                refreshBtn.textContent = '🔄 Checking...';
+                container.classList.add('loading');
+
+                if ('storage' in navigator && 'estimate' in navigator.storage) {
+                    const estimate = await navigator.storage.estimate();
+                    
+                    storageData.quota = estimate.quota || 0;
+                    storageData.usage = estimate.usage || 0;
+                    storageData.percentage = storageData.quota > 0 
+                        ? (storageData.usage / storageData.quota) * 100 
+                        : 0;
+
+                    updateUI();
+                } else {
+                    throw new Error('Storage API not supported');
+                }
+            } catch (error) {
+                console.error('Storage check failed:', error);
+                document.getElementById('statusMessage').innerHTML = 
+                    '<div class="error-message">❌ Unable to access storage information. This feature requires a modern browser and may not work in all environments.</div>';
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 Refresh Storage';
+                container.classList.remove('loading');
+            }
+        }
+
+        // Auto-refresh every 30 seconds
+        function startAutoRefresh() {
+            setInterval(checkStorage, 30000);
+        }
+
+        // PWA installation prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button or notification
+            console.log('PWA installation available');
+        });
+
+        // Service Worker registration for PWA
+        if ('serviceWorker' in navigator) {
+            // Create and register proper service worker
+            const swCode = `
+                const CACHE_NAME = 'storage-guardian-v1';
+                const urlsToCache = [
+                    self.location.pathname,
+                    self.location.pathname === '/' ? '/index.html' : self.location.pathname + 'index.html'
+                ];
+
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME)
+                            .then(cache => cache.addAll(urlsToCache))
+                    );
+                });
+
+                self.addEventListener('fetch', event => {
+                    event.respondWith(
+                        caches.match(event.request)
+                            .then(response => {
+                                // Return cached version or fetch from network
+                                return response || fetch(event.request);
+                            })
+                    );
+                });
+
+                self.addEventListener('activate', event => {
+                    event.waitUntil(
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cacheName => {
+                                    if (cacheName !== CACHE_NAME) {
+                                        return caches.delete(cacheName);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                });
+            `;
+
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            
+            navigator.serviceWorker.register(swUrl)
+                .then(registration => {
+                    console.log('Service Worker registered successfully');
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            checkStorage();
+            startAutoRefresh();
+        });
+
+        // Handle visibility change to refresh when app becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                checkStorage();
+            }
+        });
+    </script>
+</body>
+</html>
